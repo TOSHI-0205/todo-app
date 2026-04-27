@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#4f7ef8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="format-detection" content="telephone=no">
+  <title>ToDoアプリ</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    input, button, textarea {
+      font: inherit;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      padding:
+        max(20px, env(safe-area-inset-top))
+        max(16px, env(safe-area-inset-right))
+        max(24px, env(safe-area-inset-bottom))
+        max(16px, env(safe-area-inset-left));
+      min-height: 100dvh;
+      min-height: -webkit-fill-available;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: rgba(79, 126, 248, 0.15);
+    }
+
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    @media (min-width: 400px) {
+      .container {
+        padding: 32px;
+      }
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 24px;
+      color: #1a1a2e;
+    }
+
+    .input-area {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .input-area .task-text {
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      /* 16px 以上で iOS Safari のフォーカス時ズームを防ぐ */
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-area .task-text:focus {
+      border-color: #4f7ef8;
+    }
+
+    .input-area .due-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .input-area .due-wrap label {
+      font-size: 13px;
+      color: #666;
+      white-space: nowrap;
+    }
+
+    .input-area input[type="date"] {
+      padding: 10px 12px;
+      min-height: 48px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-area input[type="date"]:focus {
+      border-color: #4f7ef8;
+    }
+
+    .input-area button {
+      padding: 12px 20px;
+      min-height: 48px;
+      background: #4f7ef8;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      touch-action: manipulation;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .input-area button:hover {
+      background: #3a6ae0;
+    }
+
+    .input-area button:active {
+      background: #305fc7;
+    }
+
+    .filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .filters button {
+      flex: 1;
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 20px;
+      background: white;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      touch-action: manipulation;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .filters button:active {
+      transform: scale(0.98);
+    }
+
+    .filters button.active {
+      background: #4f7ef8;
+      color: white;
+      border-color: #4f7ef8;
+    }
+
+    .todo-list {
+      list-style: none;
+    }
+
+    .todo-item {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 10px;
+      padding: 14px 0;
+      border-bottom: 1px solid #f0f0f0;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .todo-check {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      min-width: 44px;
+      min-height: 44px;
+      margin: -6px 0;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .todo-check input {
+      width: 22px;
+      height: 22px;
+      margin: 0;
+      cursor: pointer;
+      accent-color: #4f7ef8;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .todo-item .todo-text {
+      flex: 1;
+      min-width: 0;
+      font-size: 15px;
+      color: #333;
+      word-break: break-all;
+    }
+
+    .todo-item.done .todo-text {
+      text-decoration: line-through;
+      color: #aaa;
+    }
+
+    .todo-item .todo-actions {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+      justify-content: flex-end;
+      min-width: 0;
+    }
+
+    @media (min-width: 521px) {
+      .todo-item {
+        flex-wrap: nowrap;
+      }
+
+      .todo-due-input {
+        max-width: 148px;
+        flex: 0 1 auto;
+      }
+    }
+
+    .todo-due-input {
+      flex: 1 1 140px;
+      min-width: 0;
+      padding: 10px 10px;
+      min-height: 44px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      color: #555;
+    }
+
+    .todo-due-input:focus {
+      outline: none;
+      border-color: #4f7ef8;
+    }
+
+    .todo-item.overdue .todo-due-input {
+      border-color: #e53935;
+      color: #c62828;
+      font-weight: 600;
+    }
+
+    .todo-item.done .todo-due-input {
+      opacity: 0.6;
+      font-weight: normal;
+    }
+
+    .todo-item .delete-btn {
+      flex-shrink: 0;
+      background: #ffebee;
+      border: 2px solid #e53935;
+      color: #c62828;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 10px 16px;
+      min-height: 44px;
+      min-width: 72px;
+      border-radius: 8px;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+      touch-action: manipulation;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .todo-item .delete-btn:hover {
+      background: #ffcdd2;
+      border-color: #b71c1c;
+      color: #b71c1c;
+    }
+
+    .todo-item .delete-btn:active {
+      filter: brightness(0.95);
+    }
+
+    .footer {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #aaa;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer button {
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 15px;
+      min-height: 44px;
+      padding: 8px 4px;
+      cursor: pointer;
+      text-decoration: underline;
+      touch-action: manipulation;
+    }
+
+    .footer button:hover {
+      color: #e55;
+    }
+
+    .footer button:active {
+      color: #c00;
+    }
+
+    @media (max-width: 520px) {
+      h1 {
+        font-size: 22px;
+        margin-bottom: 20px;
+      }
+
+      .input-area {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .input-area .due-wrap {
+        justify-content: space-between;
+        width: 100%;
+      }
+
+      .input-area .due-wrap label {
+        font-size: 15px;
+      }
+
+      .input-area input[type="date"] {
+        flex: 1;
+        max-width: none;
+      }
+
+      .input-area button {
+        width: 100%;
+      }
+
+      .todo-item .todo-text {
+        flex: 1 1 calc(100% - 56px);
+        font-size: 16px;
+        line-height: 1.45;
+      }
+
+      .todo-item .todo-actions {
+        flex: 1 1 100%;
+        justify-content: space-between;
+      }
+
+      .todo-due-input {
+        max-width: none;
+        flex: 1 1 auto;
+      }
+
+      .sort-hint {
+        font-size: 13px;
+      }
+
+      .footer {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    .empty {
+      text-align: center;
+      color: #bbb;
+      padding: 32px 0;
+      font-size: 14px;
+    }
+
+    .sort-hint {
+      font-size: 12px;
+      color: #888;
+      margin: -8px 0 16px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>ToDo リスト</h1>
+
+    <div class="input-area">
+      <input type="text" class="task-text" id="todoInput" placeholder="タスクを入力..." />
+      <div class="due-wrap">
+        <label for="dueInput">期限</label>
+        <input type="date" id="dueInput" />
+      </div>
+      <button type="button" onclick="addTodo()">追加</button>
+    </div>
+
+    <div class="filters">
+      <button class="active" onclick="setFilter('all', this)">すべて</button>
+      <button onclick="setFilter('active', this)">未完了</button>
+      <button onclick="setFilter('done', this)">完了済み</button>
+    </div>
+
+    <p class="sort-hint">表示は自動で並び替えです。期限が近い順、期限なしは一番下です。</p>
+
+    <ul class="todo-list" id="todoList" aria-label="タスク一覧"></ul>
+
+    <div class="footer">
+      <span id="countLabel"></span>
+      <button onclick="clearDone()">完了済みを削除</button>
+    </div>
+  </div>
+
+  <script>
+    // ブラウザに保存（リロード・タブを閉じても維持 / 失敗時は同一タブ内バックアップ）
+    const STORAGE_KEY = 'todos';
+
+    function loadTodos() {
+      try {
+        const localRaw = localStorage.getItem(STORAGE_KEY);
+        if (localRaw !== null) {
+          const parsed = JSON.parse(localRaw);
+          return Array.isArray(parsed) ? parsed : [];
+        }
+      } catch (e) { /* 壊れたデータやプライベートモードなど */ }
+
+      try {
+        const sessRaw = sessionStorage.getItem(STORAGE_KEY);
+        if (sessRaw !== null) {
+          const parsed = JSON.parse(sessRaw);
+          return Array.isArray(parsed) ? parsed : [];
+        }
+      } catch (e) {}
+
+      return [];
+    }
+
+    function normalizeTodo(t, index) {
+      let id = t != null && t.id != null ? Number(t.id) : NaN;
+      if (!id || isNaN(id)) id = Date.now() + (typeof index === 'number' ? index : 0);
+      const text = String(t.text == null ? '' : t.text);
+      const done = !!t.done;
+      let dueDate = null;
+      if (typeof t.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.dueDate)) {
+        dueDate = t.dueDate;
+      }
+      return { id: id, text: text, done: done, dueDate: dueDate };
+    }
+
+    function hasDueDate(t) {
+      return !!(t && t.dueDate && /^\d{4}-\d{2}-\d{2}$/.test(String(t.dueDate)));
+    }
+
+    /** 期限が近い順（日付文字列は YYYY-MM-DD で先頭が近い＝若い）。期限なしは常に末尾。 */
+    function sortTodos() {
+      todos.sort(function(a, b) {
+        const aOk = hasDueDate(a);
+        const bOk = hasDueDate(b);
+        if (!aOk && !bOk) return a.id - b.id;
+        if (!aOk) return 1;
+        if (!bOk) return -1;
+        if (a.dueDate !== b.dueDate) {
+          return a.dueDate < b.dueDate ? -1 : 1;
+        }
+        return a.id - b.id;
+      });
+    }
+
+    let todos = loadTodos().map(function(t, i) { return normalizeTodo(t, i); });
+    sortTodos();
+    let currentFilter = 'all';
+
+    function todayYmd() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + day;
+    }
+
+    function isOverdue(dueDate, done) {
+      if (done || !dueDate) return false;
+      return dueDate < todayYmd();
+    }
+
+    function save() {
+      sortTodos();
+      const data = JSON.stringify(todos);
+      try {
+        localStorage.setItem(STORAGE_KEY, data);
+      } catch (e) { /* 容量・拒否など */ }
+      try {
+        sessionStorage.setItem(STORAGE_KEY, data);
+      } catch (e) {}
+    }
+
+    function addTodo() {
+      const input = document.getElementById('todoInput');
+      const dueEl = document.getElementById('dueInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const rawDue = dueEl.value && /^\d{4}-\d{2}-\d{2}$/.test(dueEl.value) ? dueEl.value : null;
+      todos.push({
+        id: Date.now(),
+        text: text,
+        done: false,
+        dueDate: rawDue
+      });
+      input.value = '';
+      dueEl.value = '';
+      save();
+      render();
+    }
+
+    function setDueDate(id, value) {
+      const todo = todos.find(function(t) { return t.id === id; });
+      if (!todo) return;
+      todo.dueDate = value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+      save();
+      render();
+    }
+
+    function toggleTodo(id) {
+      const todo = todos.find(t => t.id === id);
+      if (todo) todo.done = !todo.done;
+      save();
+      render();
+    }
+
+    function deleteTodo(id) {
+      todos = todos.filter(t => t.id !== id);
+      save();
+      render();
+    }
+
+    function clearDone() {
+      todos = todos.filter(t => !t.done);
+      save();
+      render();
+    }
+
+    function setFilter(filter, btn) {
+      currentFilter = filter;
+      document.querySelectorAll('.filters button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    }
+
+    function render() {
+      const list = document.getElementById('todoList');
+      const activeCount = todos.filter(t => !t.done).length;
+
+      document.getElementById('countLabel').textContent =
+        `残り ${activeCount} 件`;
+
+      const filtered = todos.filter(t => {
+        if (currentFilter === 'active') return !t.done;
+        if (currentFilter === 'done')   return t.done;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        list.innerHTML = '<div class="empty">タスクはありません</div>';
+        return;
+      }
+
+      list.innerHTML = filtered.map(t => {
+        const overdue = isOverdue(t.dueDate, t.done);
+        const dueVal = t.dueDate ? escapeHtml(t.dueDate) : '';
+        return `
+        <li class="todo-item ${t.done ? 'done' : ''} ${overdue ? 'overdue' : ''}" data-id="${t.id}">
+          <label class="todo-check">
+            <input type="checkbox" ${t.done ? 'checked' : ''}
+                   onchange="toggleTodo(${t.id})"
+                   aria-label="完了にする" />
+          </label>
+          <span class="todo-text">${escapeHtml(t.text)}</span>
+          <div class="todo-actions">
+            <input type="date" class="todo-due-input" value="${dueVal}"
+                   onchange="setDueDate(${t.id}, this.value)"
+                   aria-label="期限" />
+            <button type="button" class="delete-btn" onclick="deleteTodo(${t.id})" aria-label="このタスクを削除">削除</button>
+          </div>
+        </li>`;
+      }).join('');
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Enterキーでも追加できる
+    document.getElementById('todoInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') addTodo();
+    });
+
+    // 最初の表示
+    render();
+  </script>
+</body>
+</html>
