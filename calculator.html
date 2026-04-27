@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#2d3238">
+  <meta name="format-detection" content="telephone=no">
+  <title>電卓</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    input, button {
+      font: inherit;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      background: #1a1d21;
+      min-height: 100dvh;
+      min-height: -webkit-fill-available;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      padding:
+        max(12px, env(safe-area-inset-top))
+        max(12px, env(safe-area-inset-right))
+        max(12px, env(safe-area-inset-bottom))
+        max(12px, env(safe-area-inset-left));
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .calc {
+      width: 100%;
+      max-width: 400px;
+      margin: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .calc-pad {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .display-wrap {
+      background: #2d3238;
+      border-radius: 16px;
+      padding: 20px 16px;
+      min-height: 88px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: flex-end;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.25);
+    }
+
+    .display-sub {
+      font-size: 14px;
+      color: #8b9299;
+      min-height: 1.3em;
+      word-break: break-all;
+      text-align: right;
+      max-width: 100%;
+    }
+
+    .display-main {
+      font-size: clamp(32px, 9vw, 40px);
+      font-weight: 300;
+      color: #f0f2f4;
+      letter-spacing: 0.02em;
+      word-break: break-all;
+      text-align: right;
+      max-width: 100%;
+      line-height: 1.2;
+    }
+
+    .display-main.error {
+      font-size: 26px;
+      color: #ff8a80;
+    }
+
+    .keys {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .key {
+      border: none;
+      border-radius: 14px;
+      font-size: 22px;
+      font-weight: 500;
+      min-height: 56px;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: filter 0.08s, transform 0.06s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .key:active {
+      filter: brightness(1.1);
+      transform: scale(0.97);
+    }
+
+    .key-num {
+      background: #3d4349;
+      color: #f0f2f4;
+    }
+
+    .key-zero {
+      grid-column: span 2;
+    }
+
+    .key-op {
+      background: #ff9f43;
+      color: #1a1d21;
+    }
+
+    .key-op.is-active {
+      box-shadow: inset 0 0 0 2px #fff, 0 0 0 2px #ff9f43;
+    }
+
+    .key-fn {
+      background: #50575f;
+      color: #f0f2f4;
+      font-size: 18px;
+    }
+
+    .hint {
+      text-align: center;
+      font-size: 12px;
+      color: #6a7179;
+      line-height: 1.4;
+      padding: 0 4px;
+    }
+
+    .keys-tax {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .key-tax8 {
+      background: #c8ecf5;
+      color: #1e4a56;
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    .key-tax8:active {
+      filter: brightness(0.96);
+    }
+
+    .key-tax10 {
+      background: #c5f0e0;
+      color: #1e4a38;
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    .key-tax10:active {
+      filter: brightness(0.96);
+    }
+  </style>
+</head>
+<body>
+  <div class="calc" role="application" aria-label="電卓">
+    <div class="display-wrap">
+      <div class="display-sub" id="subDisplay" aria-hidden="true"></div>
+      <div class="display-main" id="mainDisplay" aria-live="polite" aria-atomic="true">0</div>
+    </div>
+
+    <div class="calc-pad" id="calcPad">
+    <div class="keys-tax" role="group" aria-label="消費税（税込表示）">
+      <button type="button" class="key key-tax8" data-action="tax" data-rate="8" aria-label="消費税8%の税込価格を表示">８％</button>
+      <button type="button" class="key key-tax10" data-action="tax" data-rate="10" aria-label="消費税10%の税込価格を表示">１０％</button>
+    </div>
+
+    <div class="keys" id="keypad">
+      <button type="button" class="key key-fn" data-action="clear" aria-label="オールクリア">AC</button>
+      <button type="button" class="key key-fn" data-action="sign" aria-label="符号反転">±</button>
+      <button type="button" class="key key-fn" data-action="percent" aria-label="パーセント">％</button>
+      <button type="button" class="key key-op" data-op="/" aria-label="割る">÷</button>
+
+      <button type="button" class="key key-num" data-digit="7">7</button>
+      <button type="button" class="key key-num" data-digit="8">8</button>
+      <button type="button" class="key key-num" data-digit="9">9</button>
+      <button type="button" class="key key-op" data-op="*" aria-label="掛ける">×</button>
+
+      <button type="button" class="key key-num" data-digit="4">4</button>
+      <button type="button" class="key key-num" data-digit="5">5</button>
+      <button type="button" class="key key-num" data-digit="6">6</button>
+      <button type="button" class="key key-op" data-op="-" aria-label="引く">−</button>
+
+      <button type="button" class="key key-num" data-digit="1">1</button>
+      <button type="button" class="key key-num" data-digit="2">2</button>
+      <button type="button" class="key key-num" data-digit="3">3</button>
+      <button type="button" class="key key-op" data-op="+" aria-label="足す">＋</button>
+
+      <button type="button" class="key key-num key-zero" data-digit="0">0</button>
+      <button type="button" class="key key-num" data-action="dot">.</button>
+      <button type="button" class="key key-op" data-action="equals" aria-label="計算結果">＝</button>
+    </div>
+    </div>
+
+    <p class="hint">税込ボタンは表示中の金額を税抜きとして税込みを表示します。四則演算は左から順に計算します。</p>
+  </div>
+
+  <script>
+    (function () {
+      const mainEl = document.getElementById('mainDisplay');
+      const subEl = document.getElementById('subDisplay');
+      const keypad = document.getElementById('keypad');
+      const calcPad = document.getElementById('calcPad');
+
+      let display = '0';
+      let previous = null;
+      let pendingOp = null;
+      let newEntry = true;
+      let lastWasTax = false;
+
+      function opSymbol(op) {
+        if (op === '/') return '÷';
+        if (op === '*') return '×';
+        if (op === '-') return '−';
+        if (op === '+') return '＋';
+        return op;
+      }
+
+      function calculate(a, op, b) {
+        switch (op) {
+          case '+': return a + b;
+          case '-': return a - b;
+          case '*': return a * b;
+          case '/': return b === 0 ? NaN : a / b;
+          default: return b;
+        }
+      }
+
+      function formatNum(n) {
+        if (typeof n !== 'number' || !isFinite(n)) return 'エラー';
+        if (Math.abs(n) > 1e15 || (Math.abs(n) < 1e-9 && n !== 0)) {
+          return String(n);
+        }
+        var s = String(parseFloat(n.toPrecision(12)));
+        if (s.length > 14) s = parseFloat(n).toExponential(6);
+        return s;
+      }
+
+      function updateSub() {
+        if (previous !== null && pendingOp !== null) {
+          subEl.textContent = formatNum(previous) + ' ' + opSymbol(pendingOp);
+        } else {
+          subEl.textContent = '';
+        }
+      }
+
+      function updateMain() {
+        mainEl.textContent = display;
+        mainEl.classList.toggle('error', display === 'エラー');
+      }
+
+      function setActiveOp(op) {
+        keypad.querySelectorAll('.key-op[data-op]').forEach(function (btn) {
+          btn.classList.toggle('is-active', !!(op && btn.getAttribute('data-op') === op));
+        });
+      }
+
+      function digitLen(s) {
+        return s.replace(/^-/, '').replace(/\./g, '').length;
+      }
+
+      function inputDigit(d) {
+        if (display === 'エラー') {
+          clearAll();
+        }
+        if (lastWasTax && newEntry) {
+          subEl.textContent = '';
+          lastWasTax = false;
+        }
+        var next;
+        if (newEntry) {
+          next = d;
+          newEntry = false;
+        } else if (display === '0') {
+          next = d;
+        } else {
+          next = display + d;
+        }
+        if (digitLen(next) > 14) return;
+        display = next;
+        updateMain();
+      }
+
+      function inputDot() {
+        if (display === 'エラー') clearAll();
+        if (lastWasTax && newEntry) {
+          subEl.textContent = '';
+          lastWasTax = false;
+        }
+        if (newEntry) {
+          display = '0.';
+          newEntry = false;
+        } else if (display.indexOf('.') === -1) {
+          display += '.';
+        }
+        updateMain();
+      }
+
+      function inputOperator(nextOp) {
+        if (display === 'エラー') return;
+        lastWasTax = false;
+        var cur = parseFloat(display);
+        if (previous !== null && pendingOp !== null && !newEntry) {
+          var r = calculate(previous, pendingOp, cur);
+          if (isNaN(r)) {
+            display = 'エラー';
+            previous = null;
+            pendingOp = null;
+            newEntry = true;
+            setActiveOp(null);
+            updateMain();
+            updateSub();
+            return;
+          }
+          previous = r;
+          display = formatNum(r);
+          updateMain();
+        } else {
+          previous = cur;
+        }
+        pendingOp = nextOp;
+        newEntry = true;
+        setActiveOp(nextOp);
+        updateSub();
+      }
+
+      function equals() {
+        if (display === 'エラー') return;
+        lastWasTax = false;
+        if (pendingOp === null || previous === null) return;
+        var cur = parseFloat(display);
+        var r = calculate(previous, pendingOp, cur);
+        if (isNaN(r)) {
+          display = 'エラー';
+          previous = null;
+          pendingOp = null;
+          newEntry = true;
+          setActiveOp(null);
+          updateMain();
+          updateSub();
+          return;
+        }
+        display = formatNum(r);
+        previous = null;
+        pendingOp = null;
+        newEntry = true;
+        setActiveOp(null);
+        updateMain();
+        updateSub();
+      }
+
+      function clearAll() {
+        display = '0';
+        previous = null;
+        pendingOp = null;
+        newEntry = true;
+        lastWasTax = false;
+        setActiveOp(null);
+        updateMain();
+        updateSub();
+      }
+
+      function applyTax(rate) {
+        if (display === 'エラー') return;
+        var base = parseFloat(display);
+        if (!isFinite(base)) return;
+        var inc = base * (1 + rate / 100);
+        var formatted = formatNum(inc);
+        if (formatted === 'エラー') {
+          display = 'エラー';
+        } else {
+          display = formatted;
+        }
+        subEl.textContent = '税抜 ' + formatNum(base) + ' · ' + rate + '% → 税込';
+        previous = null;
+        pendingOp = null;
+        newEntry = true;
+        lastWasTax = true;
+        setActiveOp(null);
+        updateMain();
+      }
+
+      function toggleSign() {
+        if (display === 'エラー') return;
+        if (lastWasTax) {
+          subEl.textContent = '';
+          lastWasTax = false;
+        }
+        if (display === '0') return;
+        if (display.charAt(0) === '-') display = display.slice(1);
+        else display = '-' + display;
+        newEntry = false;
+        updateMain();
+      }
+
+      function percent() {
+        if (display === 'エラー') return;
+        if (lastWasTax) {
+          subEl.textContent = '';
+          lastWasTax = false;
+        }
+        var v = parseFloat(display);
+        display = formatNum(v / 100);
+        newEntry = true;
+        updateMain();
+      }
+
+      calcPad.addEventListener('click', function (e) {
+        var btn = e.target.closest('.key');
+        if (!btn) return;
+
+        if (btn.hasAttribute('data-digit')) {
+          inputDigit(btn.getAttribute('data-digit'));
+          return;
+        }
+
+        var action = btn.getAttribute('data-action');
+        if (action === 'dot') {
+          inputDot();
+          return;
+        }
+        if (action === 'clear') {
+          clearAll();
+          return;
+        }
+        if (action === 'sign') {
+          toggleSign();
+          return;
+        }
+        if (action === 'percent') {
+          percent();
+          return;
+        }
+        if (action === 'equals') {
+          equals();
+          return;
+        }
+        if (action === 'tax') {
+          var rate = parseInt(btn.getAttribute('data-rate'), 10);
+          if (rate === 8 || rate === 10) {
+            applyTax(rate);
+          }
+          return;
+        }
+
+        var op = btn.getAttribute('data-op');
+        if (op) {
+          inputOperator(op);
+        }
+      });
+
+      updateMain();
+      updateSub();
+    })();
+  </script>
+</body>
+</html>
